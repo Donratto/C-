@@ -1,0 +1,196 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+<style>
+    table {
+        display: inline-block;
+        margin: 10px;
+    }
+
+    .hidden {
+        display: none;
+        position: fixed;
+    }
+</style>
+
+<div class="text-center">
+    <h1 class="display-4" id="player">Place down some ships</h1>
+    <button onclick="sendSwap()" id="passTurn">Pass turn</button>
+    <button onclick="sendRandom()" id="passRandom">Set random</button>
+    <table id=PlayerField>
+
+    </table>
+    <table id="EnemyField">
+
+    </table>
+</div>
+
+<script>
+    function getShipOrWater(val) {
+        return val ? "🚢" : "🌊";
+    }
+
+    function getHitOrMiss(isShip) {
+        return isShip ? "🎯" : "🌫️";
+    }
+
+    function displayVictory(name) {
+        var header = document.getElementById("player");
+        header.innerHTML = name + " has won!"
+        document.getElementById("passTurn").classList.toggle("hidden");
+        setInterval(slowlyRotate, 40);
+    }
+
+    rotation = 10;
+
+    function slowlyRotate() {
+        var table = document.getElementById("PlayerField");
+        table.setAttribute("style", "transform: rotate(" + rotation + "deg);");
+        table = document.getElementById("EnemyField");
+        table.setAttribute("style", "transform: rotate(" + -rotation + "deg);");
+        rotation++;
+        if (rotation >= 360) rotation = 0;
+    }
+
+    function sendAjax(data, handler, onreturn, onfail) {
+        $.ajax({
+            type: "GET",
+            url: '/?handler=' + handler,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            data: data,
+            success: onreturn,
+            error: onfail
+        });
+    }
+
+    function getCoords(id) {
+        var coords = id.substring(3).split(";");
+        return { x: parseInt(coords[0]), y: parseInt(coords[1]) };
+    }
+
+    function sendShip() {
+        var btn = this;
+        sendAjax(
+            getCoords(this.id),
+            "AddShip",
+            function(response) {
+                var rsp = JSON.parse(response);
+                if (rsp.Invalid) {
+                    if (rsp.MaxShips) console.log("Ship but no");
+                    else console.log("no here");
+                }
+                else if (!response.Occupied) {
+                    btn.innerHTML = "🚢";
+                }
+            }, 
+            function(response) {console.log("Failed.")}
+        );
+    }
+
+    function sendHit() {
+        var btn = this;
+        sendAjax(
+            getCoords(this.id),
+            "Shoot",
+            function(response) {
+                var rsp = JSON.parse(response);
+                if (rsp.Invalid) {
+                    console.log("no");
+                }
+                else {
+                    btn.innerHTML = rsp.Occupied ? "🎯" : "🌫️";
+                    if (rsp.Won) displayVictory(rsp.Player);
+                }
+            }, 
+            function(response) {console.log("Failed.")}
+        );
+    }
+
+    function setState(ships, tries, enemyShips, enemyTries) {
+        for (var y = 0; y < 10; y++) {
+            for (var x = 0; x < 10; x++) {
+                var btnA = document.getElementById("btA" + x + ";" + y);
+                var btnB = document.getElementById("btB" + x + ";" + y);
+                btnA.innerHTML = getShipOrWater(ships[y][x]);
+                if (enemyTries[y][x])
+                    btnA.innerHTML = getHitOrMiss(ships[y][x]);
+                if (tries[y][x])
+                    btnB.innerHTML = getHitOrMiss(enemyShips[y][x]);
+                else
+                    btnB.innerHTML = "🌊";
+            }
+        }
+    }
+
+    function sendSwap() {
+        $.ajax({
+            type: "GET",
+            url: '/?handler=Swap',
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            data: {},
+            success: function(response) {
+                var rsp = JSON.parse(response);
+                if (rsp.Invalid) {
+                    console.log("can't swap");
+                }
+                else {
+                    setState(rsp.Ships, rsp.Tries, rsp.EnemyShips, rsp.EnemyTries);
+                    document.getElementById("player").innerHTML = rsp.Player + "'s turn.";
+                }
+            },
+            error: function() {console.log("Failed");}
+        });
+    }
+
+    function sendRandom() {
+        sendAjax({}, "Random",
+        function(response) {
+            var rsp = JSON.parse(response);
+            if (!rsp.Invalid) {
+                document.getElementById("btA" + rsp.x + ";" + rsp.y).innerHTML = "🚢";
+            }
+            else {
+                console.log("Can't");
+            }
+        },
+        function() {console.log("fail");});
+    }
+
+    function createTable(table, diff, func) {
+        for (var y = 0; y < 10; y++) {
+            var row = document.createElement("tr");
+            for (var x = 0; x < 10; x++) {
+                var td = document.createElement("td");
+                var btn = document.createElement("button");
+                btn.id = "bt" + diff +  x + ";" + y;
+                btn.innerHTML = "🌊";
+                btn.onclick = func;
+                td.append(btn);
+                row.append(td);
+            }
+            table.append(row);
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        var table = document.getElementById("PlayerField");
+        createTable(table, "A", sendShip);
+        var table = document.getElementById("EnemyField");
+        createTable(table, "B", sendHit);
+
+        $.ajax({
+            type: "GET",
+            url: '/?handler=Reload',
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            data: {NameA : "Player1", NameB : "Player2"},
+            error: function() {console.log("Failed");}
+        });
+    });
+</script>
