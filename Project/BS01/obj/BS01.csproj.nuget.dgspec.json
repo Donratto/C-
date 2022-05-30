@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "/Users/filip/GitHub/C-sharp/Project/BS01/BS01.csproj": {}
+    "/Users/filip/Code/C#/Projekt_VSC/BattleShips/BS01/BS01.csproj": {}
   },
   "projects": {
-    "/Users/filip/GitHub/C-sharp/Project/BS01/BS01.csproj": {
+    "/Users/filip/Code/C#/Projekt_VSC/BattleShips/BS01/BS01.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/filip/GitHub/C-sharp/Project/BS01/BS01.csproj",
+        "projectUniqueName": "/Users/filip/Code/C#/Projekt_VSC/BattleShips/BS01/BS01.csproj",
         "projectName": "BS01",
-        "projectPath": "/Users/filip/GitHub/C-sharp/Project/BS01/BS01.csproj",
+        "projectPath": "/Users/filip/Code/C#/Projekt_VSC/BattleShips/BS01/BS01.csproj",
         "packagesPath": "/Users/filip/.nuget/packages/",
-        "outputPath": "/Users/filip/GitHub/C-sharp/Project/BS01/obj/",
+        "outputPath": "/Users/filip/Code/C#/Projekt_VSC/BattleShips/BS01/obj/",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "/usr/local/share/dotnet/sdk/NuGetFallbackFolder"

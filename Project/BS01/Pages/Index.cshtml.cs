@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Text.Json;
-using System.Linq;
 
 namespace BS01.Pages;
 
@@ -20,44 +19,11 @@ public class IndexModel : PageModel
         _logger = logger;
     }
 
-    public void OnGet()
-    {
-
-    }
-
-    public class ButtonPos {
-        public int x {get; set;} = 0;
-        public int y {get; set;} = 0;
-        public bool Invalid {get;set;} = false;
-    }
-
-    public class ShipResponse {
-        public bool Occupied { get; set; } = false;
-        public int Ships { get; set; } = 0;
-        public bool Won {get;set;} = false;
-        public bool Invalid {get;set;} = false;
-        public bool MaxShips {get;set;} = false;
-        public string Player {get; set;} = "A";
-    }
-
-    public class TableResponse {
-        public bool[][]? Ships {get; set;}
-        public bool[][]? EnemyShips {get; set;}
-        public bool[][]? Tries {get; set;}
-        public bool[][]? EnemyTries {get;set;}
-        public string Player {get; set;} = "A";
-    }
-
     static Player CurrentPlayer, OtherPlayer;
 
     static JsonResult GetAsJson(object o) {
         var str = JsonSerializer.Serialize(o);
         return new JsonResult(str);
-    }
-
-    public class PlayerMsg {
-        public string NameA {get;set;} = "A";
-        public string NameB {get;set;} = "B";
     }
 
     public void OnGetReload(PlayerMsg msg) {
@@ -68,15 +34,18 @@ public class IndexModel : PageModel
     }
 
     public JsonResult OnGetAddShip(ButtonPos msg) {
-        if (Ready) return GetAsJson(new ShipResponse() { Invalid = true });
+        if (Ready) return GetAsJson(new ShipResponse() { Invalid = true, MaxShipsAchieved = true });
+
         var occupied = !CurrentPlayer.AddShip(msg.x, msg.y);
+
         var occ = new ShipResponse()
         {
             Occupied = occupied,
             Ships = CurrentPlayer.ShipsLeft,
             Invalid = occupied == true,
-            MaxShips = CurrentPlayer.ShipsLeft == Player.MaxShips,
-            Player = CurrentPlayer.Name
+            MaxShipsAchieved = CurrentPlayer.ShipsLeft == Player.MaxShips,
+            Player = CurrentPlayer.Name,
+            MaxShips = Player.MaxShips
         };
         return GetAsJson(occ);
     }
@@ -96,13 +65,14 @@ public class IndexModel : PageModel
     }
 
     public JsonResult OnGetSwap() {
-        if (!CurrentPlayer.Ready)
+        if (!CurrentPlayer.Ready || (Ready && !HasShot))
             return GetAsJson(new ShipResponse() {Invalid = true});
 
         HasShot = false;
         var temp = CurrentPlayer;
         CurrentPlayer = OtherPlayer;
         OtherPlayer = temp;
+
         if (CurrentPlayer.Ready) Ready = true;
 
         return GetAsJson(new TableResponse() {
@@ -118,11 +88,11 @@ public class IndexModel : PageModel
         if (HasShot || !Ready) return GetAsJson(new ShipResponse() {Invalid = true});
 
         var valid = CurrentPlayer.TryShoot(msg.x, msg.y);
-        bool occupied = false;
-        if (valid) occupied = OtherPlayer.GetShot(msg.x, msg.y);
+        if (!valid) return GetAsJson(new ShipResponse() {Invalid = true});
+
         var occ = new ShipResponse()
         {
-            Occupied = occupied,
+            Occupied = OtherPlayer.GetShot(msg.x, msg.y),
             Invalid = !valid,
             Won = OtherPlayer.ShipsLeft == 0,
             Player = CurrentPlayer.Name
@@ -132,10 +102,14 @@ public class IndexModel : PageModel
     }
 
     public JsonResult OnGetRandom() {
-        if (Ready) return GetAsJson(new ButtonPos() {Invalid = true});
+        if (Ready) return GetAsJson(new ButtonResponse() {Invalid = true});
 
         var suc = CurrentPlayer.SetRandom(out var x, out var y);
-        return GetAsJson(new ButtonPos() {x = x, y = y, Invalid = !suc});
+        return GetAsJson(new ButtonResponse() {
+            x = x, y = y, Invalid = !suc,
+            Ships = CurrentPlayer.ShipsLeft,
+            MaxShips = Player.MaxShips
+        });
     }
 }
 
@@ -144,7 +118,7 @@ public class Player {
     public bool[,] Tried = new bool[10,10];
     public string Name;
     public int ShipsLeft = 0;
-    public static int MaxShips = 20;
+    public static int MaxShips = 2;
 
     public bool Ready = false;
 
@@ -198,3 +172,39 @@ public class Player {
         return true;
     }
 }
+
+    public class PlayerMsg {
+        public string NameA {get;set;} = "A";
+        public string NameB {get;set;} = "B";
+    }
+
+public class ButtonPos {
+        public int x {get; set;} = 0;
+        public int y {get; set;} = 0;
+    }
+
+    public class ButtonResponse {
+        public int x {get; set;} = 0;
+        public int y {get; set;} = 0;
+        public bool Invalid {get;set;} = false;
+        public int Ships { get; set; } = 0;
+        public int MaxShips { get; set; } = 20;
+    }
+
+    public class ShipResponse {
+        public bool Occupied { get; set; } = false;
+        public int Ships { get; set; } = 0;
+        public int MaxShips { get; set; } = 20;
+        public bool Won {get;set;} = false;
+        public bool Invalid {get;set;} = false;
+        public bool MaxShipsAchieved {get;set;} = false;
+        public string Player {get; set;} = "A";
+    }
+
+    public class TableResponse {
+        public bool[][]? Ships {get; set;}
+        public bool[][]? EnemyShips {get; set;}
+        public bool[][]? Tries {get; set;}
+        public bool[][]? EnemyTries {get;set;}
+        public string Player {get; set;} = "A";
+    }
